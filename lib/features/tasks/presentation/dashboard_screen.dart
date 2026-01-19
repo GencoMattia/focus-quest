@@ -121,6 +121,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             _buildQuickStartCard(context),
             const SizedBox(height: 16),
+            _buildFocusCard(ref, context), // New Focus Card
+            const SizedBox(height: 16),
+            _buildCreateTaskButton(context), // New Create Button
+            const SizedBox(height: 16),
             _buildGamificationRow(ref, context),
           ],
         ),
@@ -178,7 +182,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                          ? [const Text('Completa delle task per ottenere badge!')] 
                          : badges.map((b) => ListTile(title: Text(b), leading: const Icon(Icons.star, color: Colors.amber))).toList(),
                      ),
-                     actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Chiudi'))],
+                     actions: [TextButton(onPressed: () => context.pop(), child: const Text('Chiudi'))],
                    )
                  );
                });
@@ -206,6 +210,95 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildFocusCard(WidgetRef ref, BuildContext context) {
+    final urgentTasksAsync = ref.watch(taskRepositoryProvider).watchUrgentTasks();
+
+    return StreamBuilder<List<Task>>(
+      stream: urgentTasksAsync,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+        
+        // Take the first one
+        final task = snapshot.data!.first;
+        
+        return Card(
+          color: AppColors.calmBlue.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.calmBlue, width: 2)
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.priority_high, color: AppColors.calmBlue),
+                    const SizedBox(width: 8),
+                    Text('Priorità Alta', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.calmBlue, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  task.title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                if (task.description != null) ...[
+                  const SizedBox(height: 8),
+                  Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.calmBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => context.push('/execute-task/${task.id}'),
+                    child: const Text('Focus Ora 🧘'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCreateTaskButton(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () => context.push('/create-task'),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: AppColors.sageGreen, shape: BoxShape.circle),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Aggiungi Nuova Attività',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickStartCard(BuildContext context) {
     return Card(
       color: AppColors.sageGreen.withOpacity(0.2),
@@ -226,6 +319,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                   // ... options
                   _TimeOptionButton(label: '15 min', minutes: 15, onTap: () => _suggestTask(15)),
                   _TimeOptionButton(label: '30 min', minutes: 30, onTap: () => _suggestTask(30)),
                   _TimeOptionButton(label: '1 h+', minutes: 60, onTap: () => _suggestTask(60)),

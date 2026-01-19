@@ -34,8 +34,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   Future<void> _loadTask() async {
     var task = await ref.read(taskRepositoryProvider).getTaskById(widget.taskId);
     
-    if (task != null && task.status == 'pending') {
-      // Auto-start task if it's pending
+    if (task != null && (task.status == 'pending' || task.status == 'todo')) {
+      // Auto-start task if it's pending or todo
       task = task.copyWith(
         status: 'in_progress',
         isDirty: true,
@@ -134,7 +134,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: const Text('Salta'),
               ),
               ElevatedButton(
