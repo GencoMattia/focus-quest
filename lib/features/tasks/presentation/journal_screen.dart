@@ -63,7 +63,7 @@ class JournalScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Errore: $err')),
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'add_task_journal',
+        heroTag: null,
         backgroundColor: AppColors.calmBlue,
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () => context.push('/create-task'),

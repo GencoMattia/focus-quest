@@ -275,21 +275,21 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               children: [
                 if (!_isPaused)
                   FloatingActionButton.large(
-                    heroTag: 'pause_task',
+                    heroTag: null,
                     backgroundColor: AppColors.lilac,
                     onPressed: _pauseTask,
                     child: const Icon(Icons.pause, color: AppColors.textDark),
                   )
                 else
                   FloatingActionButton.large(
-                    heroTag: 'resume_task',
+                    heroTag: null,
                     backgroundColor: AppColors.sageGreen,
                     onPressed: _resumeTask,
                     child: const Icon(Icons.play_arrow, color: Colors.white),
                   ),
                 const SizedBox(width: 32),
                 FloatingActionButton.large(
-                  heroTag: 'complete_task',
+                  heroTag: null,
                   backgroundColor: AppColors.calmBlue,
                   onPressed: _completeTask,
                   child: const Icon(Icons.check, size: 48, color: Colors.white),
