@@ -63,7 +63,16 @@ class SyncService {
       final remoteTasks = response as List<dynamic>;
 
       for (final remote in remoteTasks) {
-        if (remote is! Map<String, dynamic>) continue;
+        if (remote is! Map<String, dynamic>) {
+          AppLogger.warning('Skipping invalid remote task data: type mismatch', 'SyncService');
+          continue;
+        }
+        
+        // Validate required fields
+        if (remote['id'] == null || remote['user_id'] == null || remote['title'] == null) {
+          AppLogger.warning('Skipping remote task with missing required fields: ${remote['id']}', 'SyncService');
+          continue;
+        }
         
         // TODO: Implement proper conflict resolution by comparing timestamps
         // For now, remote changes overwrite local changes
@@ -73,7 +82,7 @@ class SyncService {
               ? DateTime.parse(remote['updated_at'] as String)
               : null;
         } catch (e) {
-          AppLogger.warning('Invalid updated_at format for task ${remote['id']}', 'SyncService');
+          AppLogger.warning('Invalid updated_at format for task ${remote['id']}: ${remote['updated_at']}', 'SyncService');
         }
         
         DateTime? remoteCreatedAt;
@@ -82,7 +91,7 @@ class SyncService {
               ? DateTime.parse(remote['created_at'] as String)
               : null;
         } catch (e) {
-          AppLogger.warning('Invalid created_at format for task ${remote['id']}', 'SyncService');
+          AppLogger.warning('Invalid created_at format for task ${remote['id']}: ${remote['created_at']}', 'SyncService');
         }
             
         await _db.into(_db.tasks).insertOnConflictUpdate(TasksCompanion(

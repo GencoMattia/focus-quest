@@ -24,12 +24,16 @@ class AppLogger {
   }
 
   /// Log a warning message
+  /// Always logs warnings in both debug and release mode as they indicate
+  /// potential issues that should be monitored
   static void warning(String message, [String? tag]) {
     final prefix = tag != null ? '[$tag] ' : '';
     debugPrint('WARNING: $prefix$message');
   }
 
   /// Log an error message
+  /// Always logs errors in both debug and release mode as they indicate
+  /// critical issues that need attention
   static void error(String message, [Object? error, StackTrace? stackTrace, String? tag]) {
     final prefix = tag != null ? '[$tag] ' : '';
     debugPrint('ERROR: $prefix$message');
