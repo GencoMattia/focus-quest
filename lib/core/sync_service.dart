@@ -67,9 +67,23 @@ class SyncService {
         
         // TODO: Implement proper conflict resolution by comparing timestamps
         // For now, remote changes overwrite local changes
-        final remoteUpdatedAt = remote['updated_at'] != null 
-            ? DateTime.parse(remote['updated_at'] as String)
-            : DateTime.now();
+        DateTime? remoteUpdatedAt;
+        try {
+          remoteUpdatedAt = remote['updated_at'] != null 
+              ? DateTime.parse(remote['updated_at'] as String)
+              : null;
+        } catch (e) {
+          AppLogger.warning('Invalid updated_at format for task ${remote['id']}', 'SyncService');
+        }
+        
+        DateTime? remoteCreatedAt;
+        try {
+          remoteCreatedAt = remote['created_at'] != null
+              ? DateTime.parse(remote['created_at'] as String)
+              : null;
+        } catch (e) {
+          AppLogger.warning('Invalid created_at format for task ${remote['id']}', 'SyncService');
+        }
             
         await _db.into(_db.tasks).insertOnConflictUpdate(TasksCompanion(
           id: Value(remote['id'] as String),
@@ -79,8 +93,8 @@ class SyncService {
           estimatedDuration: Value(remote['estimated_duration'] as int?),
           urgency: Value(remote['urgency'] as String),
           status: Value(remote['status'] as String),
-          createdAt: Value(DateTime.parse(remote['created_at'] as String)),
-          updatedAt: Value(remoteUpdatedAt),
+          createdAt: Value(remoteCreatedAt ?? DateTime.now()),
+          updatedAt: Value(remoteUpdatedAt ?? DateTime.now()),
           isDirty: const Value(false),
           lastSyncedAt: Value(DateTime.now()),
         ));
