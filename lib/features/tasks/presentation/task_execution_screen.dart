@@ -90,10 +90,10 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> with 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
-              children: const [
-                Icon(Icons.check_circle, color: AppColors.textOnColor),
-                SizedBox(width: AppTheme.spaceSm),
-                Text('Foto aggiunta! 📸'),
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.textOnColor),
+                const SizedBox(width: AppTheme.spaceSm),
+                const Text('Foto aggiunta! 📸'),
               ],
             ),
           ),

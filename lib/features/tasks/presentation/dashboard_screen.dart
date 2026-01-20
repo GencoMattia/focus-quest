@@ -60,10 +60,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
-              children: const [
-                Icon(Icons.spa, color: AppColors.textOnColor),
-                SizedBox(width: AppTheme.spaceSm),
-                Expanded(
+              children: [
+                const Icon(Icons.spa, color: AppColors.textOnColor),
+                const SizedBox(width: AppTheme.spaceSm),
+                const Expanded(
                   child: Text('Nessuna task urgente. Rilassati! 🌿'),
                 ),
               ],
@@ -487,11 +487,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     showDialog(
                       context: context,
                       builder: (_) => AlertDialog(
-                        title: const Row(
+                        title: Row(
                           children: [
-                            Icon(Icons.emoji_events, color: AppColors.warning),
-                            SizedBox(width: AppTheme.spaceSm),
-                            Text('I tuoi Traguardi'),
+                            const Icon(Icons.emoji_events, color: AppColors.warning),
+                            const SizedBox(width: AppTheme.spaceSm),
+                            const Text('I tuoi Traguardi'),
                           ],
                         ),
                         content: Column(

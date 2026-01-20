@@ -591,10 +591,10 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
-            children: const [
-              Icon(Icons.check_circle, color: AppColors.textOnColor),
-              SizedBox(width: AppTheme.spaceSm),
-              Expanded(child: Text('Attività creata con successo!')),
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.textOnColor),
+              const SizedBox(width: AppTheme.spaceSm),
+              const Expanded(child: Text('Attività creata con successo!')),
             ],
           ),
           behavior: SnackBarBehavior.floating,

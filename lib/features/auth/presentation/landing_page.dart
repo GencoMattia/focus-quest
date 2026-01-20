@@ -106,9 +106,9 @@ class LandingPage extends StatelessWidget {
                   },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text('Hai già un account? '),
-                      Text('Accedi', style: TextStyle(fontWeight: FontWeight.bold)),
+                    children: [
+                      const Text('Hai già un account? '),
+                      const Text('Accedi', style: TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
