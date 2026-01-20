@@ -9,75 +9,108 @@ class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.warmGrey,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(AppTheme.spaceLg),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo or Hero Image Placeholder
-                const Icon(
-                  Icons.spa_rounded,
-                  size: 80,
-                  color: AppColors.calmBlue,
+                // Logo with gradient background
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spaceLg),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primaryLight.withOpacity(0.3),
+                        AppColors.secondaryLight.withOpacity(0.3),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.spa_rounded,
+                    size: 80,
+                    color: AppColors.primary,
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppTheme.spaceLg),
+                
+                // App name
                 Text(
                   'Focus Quest',
                   style: Theme.of(context).textTheme.displayLarge,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppTheme.spaceSm),
+                
+                // Tagline
                 Text(
                   'Ritrova il tuo ritmo. Senza ansia.',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppColors.textLight,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textSecondary,
                     fontWeight: FontWeight.normal,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: AppTheme.space2xl),
                 
-                // Functionality Highlights
+                // Features
                 _buildFeatureItem(
                   context,
-                  icon: Icons.timelapse,
+                  icon: Icons.bolt_outlined,
                   title: 'Avvio Rapido',
                   description: 'Dimmi quanto tempo hai, ti dirò cosa fare.',
+                  color: AppColors.primary,
                 ),
+                const SizedBox(height: AppTheme.spaceMd),
                 _buildFeatureItem(
                   context,
-                  icon: Icons.cloud_off,
+                  icon: Icons.cloud_off_outlined,
                   title: 'Offline First',
                   description: 'Sempre con te, anche senza internet.',
+                  color: AppColors.secondary,
                 ),
+                const SizedBox(height: AppTheme.spaceMd),
                 _buildFeatureItem(
                   context,
-                  icon: Icons.favorite_border,
+                  icon: Icons.favorite_outline,
                   title: 'Zero Giudizio',
                   description: 'Gamification gentile per motivarti.',
+                  color: AppColors.accent,
                 ),
                 
-                const SizedBox(height: 64),
+                const SizedBox(height: AppTheme.space3xl),
                 
-                // CTA
+                // CTA Buttons
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
+                  child: FilledButton(
                     onPressed: () {
                       context.push('/signup'); 
                     },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppTheme.spaceMd + AppTheme.spaceXs,
+                      ),
+                    ),
                     child: const Text('Inizia il tuo viaggio'),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppTheme.spaceMd),
                 TextButton(
                   onPressed: () {
                     context.push('/login');
                   },
-                  child: const Text('Hai già un account? Accedi'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text('Hai già un account? '),
+                      Text('Accedi', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -87,31 +120,49 @@ class LandingPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureItem(BuildContext context, {required IconData icon, required String title, required String description}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+  Widget _buildFeatureItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+        ),
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppTheme.spaceSm),
             decoration: BoxDecoration(
-              color: AppColors.lilac.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
             ),
-            child: Icon(icon, color: AppColors.calmBlue),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppTheme.spaceMd),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                const SizedBox(height: AppTheme.spaceXs),
                 Text(
                   description,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
