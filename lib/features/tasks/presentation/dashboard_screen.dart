@@ -10,6 +10,11 @@ import 'package:focus_quest/core/database/app_database.dart';
 import 'package:focus_quest/core/sync_service.dart';
 import 'package:focus_quest/features/gamification/gamification_providers.dart';
 import 'package:focus_quest/core/presentation/widgets/calm_card.dart';
+import 'package:focus_quest/core/presentation/widgets/animated_calm_card.dart';
+import 'package:focus_quest/core/presentation/widgets/decorative_shapes.dart';
+import 'package:focus_quest/core/presentation/widgets/animated_progress.dart';
+import 'package:focus_quest/core/presentation/widgets/animated_list_item.dart';
+import 'package:focus_quest/core/theme/app_animations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -148,70 +153,235 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // Modern app bar
-          SliverAppBar(
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            backgroundColor: AppColors.surface,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                'Focus Quest',
-                style: Theme.of(context).textTheme.titleLarge,
+      body: Stack(
+        children: [
+          // Decorative background
+          const DecorativeShapes(animated: true),
+          
+          // Main content
+          CustomScrollView(
+            slivers: [
+              // Modern app bar with gradient
+              SliverAppBar(
+                expandedHeight: 140,
+                floating: false,
+                pinned: true,
+                backgroundColor: AppColors.surface,
+                flexibleSpace: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primaryLight.withOpacity(0.3),
+                        AppColors.surface,
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: FlexibleSpaceBar(
+                    title: ShaderMask(
+                      shaderCallback: (bounds) => AppColors.primaryGradient.createShader(bounds),
+                      child: Text(
+                        'Focus Quest',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    titlePadding: const EdgeInsets.only(
+                      left: AppTheme.spaceMd,
+                      bottom: AppTheme.spaceMd,
+                    ),
+                    expandedTitleScale: 1.5,
+                  ),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () {},
+                    tooltip: 'Notifiche',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () {},
+                    tooltip: 'Impostazioni',
+                  ),
+                ],
               ),
-              titlePadding: const EdgeInsets.only(
-                left: AppTheme.spaceMd,
-                bottom: AppTheme.spaceMd,
-              ),
-              expandedTitleScale: 1.5,
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
-                tooltip: 'Notifiche',
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () {},
-                tooltip: 'Impostazioni',
+              
+              // Content
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTheme.spaceMd),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Greeting section with animation
+                      FadeIn(
+                        duration: AppAnimations.normal,
+                        child: _buildGreetingSection(context),
+                      ),
+                      const SizedBox(height: AppTheme.spaceLg),
+                      
+                      // Quick Start Card - Most prominent with animation
+                      AnimatedCalmCard(
+                        delay: AppAnimations.staggerDelay,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primaryLight.withOpacity(0.4),
+                            AppColors.surface,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
+                          width: 2,
+                        ),
+                        child: _buildQuickStartContent(context),
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      
+                      // Priority Task Card (if available)
+                      AnimatedCalmCard(
+                        delay: AppAnimations.staggerDelay * 2,
+                        child: _buildPriorityTaskCard(context),
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      
+                      // Gamification Stats with staggered animation
+                      FadeIn(
+                        delay: AppAnimations.staggerDelay * 3,
+                        child: _buildGamificationSection(context),
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      
+                      // Quick Actions with animation
+                      FadeIn(
+                        delay: AppAnimations.staggerDelay * 4,
+                        child: _buildQuickActions(context),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-          
-          // Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(AppTheme.spaceMd),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Greeting section
-                  _buildGreetingSection(context),
-                  const SizedBox(height: AppTheme.spaceLg),
-                  
-                  // Quick Start Card - Most prominent
-                  _buildQuickStartCard(context),
-                  const SizedBox(height: AppTheme.spaceMd),
-                  
-                  // Priority Task Card (if available)
-                  _buildPriorityTaskCard(context),
-                  const SizedBox(height: AppTheme.spaceMd),
-                  
-                  // Gamification Stats
-                  _buildGamificationSection(context),
-                  const SizedBox(height: AppTheme.spaceMd),
-                  
-                  // Quick Actions
-                  _buildQuickActions(context),
-                ],
-              ),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStartContent(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppTheme.spaceMd),
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: const Icon(Icons.bolt, size: 36, color: AppColors.surface),
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+        Text(
+          'Quick Start',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceXs),
+        Text(
+          'Quanto tempo hai adesso?',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppTheme.spaceLg),
+        if (_isLoadingSuggestion)
+          Column(
+            children: [
+              const PulsingDots(size: 12),
+              const SizedBox(height: AppTheme.spaceSm),
+              Text(
+                'Sto pensando...',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          )
+        else
+          Wrap(
+            spacing: AppTheme.spaceSm,
+            runSpacing: AppTheme.spaceSm,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildTimeButton(context, 15),
+              _buildTimeButton(context, 30),
+              _buildTimeButton(context, 60),
+              _buildTimeButton(context, 90),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTimeButton(BuildContext context, int minutes) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _suggestTask(minutes),
+        child: AnimatedContainer(
+          duration: AppAnimations.fast,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spaceLg,
+            vertical: AppTheme.spaceMd,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.primaryDark,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.timer_outlined,
+                color: AppColors.textOnColor,
+                size: 20,
+              ),
+              const SizedBox(width: AppTheme.spaceXs),
+              Text(
+                '$minutes min',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.textOnColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

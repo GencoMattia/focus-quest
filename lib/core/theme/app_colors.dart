@@ -12,16 +12,61 @@ class AppColors {
   
   static const Color accent = Color(0xFFD4A5D7); // Enhanced Lilac
   static const Color accentLight = Color(0xFFE0BBE4); // Light Lilac
+  static const Color accentDark = Color(0xFFB388B5); // Dark Lilac
+  
+  // Modern gradient colors
+  static const Color gradientStart = Color(0xFF89CFF0); // Sky Blue
+  static const Color gradientMid = Color(0xFFA8E6CF); // Mint
+  static const Color gradientEnd = Color(0xFFDCD0FF); // Lavender
+  
+  // Vibrant accent colors for variety
+  static const Color coral = Color(0xFFFF6B6B); // Coral Red
+  static const Color turquoise = Color(0xFF4ECDC4); // Turquoise
+  static const Color amber = Color(0xFFFFA07A); // Light Salmon/Amber
+  static const Color mint = Color(0xFF98D8C8); // Mint Green
+  static const Color lavender = Color(0xFFB19CD9); // Lavender
   
   // Backgrounds
-  static const Color background = Color(0xFFFAFAFA); // Slightly warmer white
+  static const Color background = Color(0xFFF8F9FA); // Modern light grey-white
   static const Color surface = Color(0xFFFFFFFF); // Pure white for cards
   static const Color surfaceVariant = Color(0xFFF5F5F5); // Light grey
+  static const Color surfaceTinted = Color(0xFFF0F7FF); // Tinted surface
 
   // Accents (Non-aggressive)
   static const Color softPink = Color(0xFFFFDFD3);
   static const Color peach = Color(0xFFFEC8D8);
   static const Color warmBeige = Color(0xFFFFF4E6); // New: warm neutral
+  
+  // Gradient presets
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF89CFF0), Color(0xFF6B9BD1)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient secondaryGradient = LinearGradient(
+    colors: [Color(0xFFA8E6CF), Color(0xFF88C9A1)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [Color(0xFFE0BBE4), Color(0xFFD4A5D7)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient heroGradient = LinearGradient(
+    colors: [Color(0xFF89CFF0), Color(0xFFA8E6CF), Color(0xFFDCD0FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const LinearGradient subtleGradient = LinearGradient(
+    colors: [Color(0xFFF8F9FA), Color(0xFFFFFFFF)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
 
   // Text - Improved hierarchy
   static const Color textPrimary = Color(0xFF1A1A1A); // Darker for better readability
@@ -40,6 +85,8 @@ class AppColors {
 
   // Shadows and Overlays
   static const Color shadow = Color(0x1A000000); // 10% black
+  static const Color shadowMedium = Color(0x26000000); // 15% black
+  static const Color shadowHeavy = Color(0x33000000); // 20% black
   static const Color overlay = Color(0x80000000); // 50% black for dialogs
   static const Color divider = Color(0xFFE0E0E0); // Subtle divider
 
