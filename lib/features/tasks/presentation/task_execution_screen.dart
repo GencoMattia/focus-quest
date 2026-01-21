@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:focus_quest/core/database/app_database.dart';
 import 'package:focus_quest/core/theme/app_theme.dart';
 import 'package:focus_quest/core/theme/app_colors.dart';
 import 'package:focus_quest/features/tasks/data/task_providers.dart';
+import 'package:focus_quest/core/presentation/widgets/animated_progress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:go_router/go_router.dart';
@@ -409,67 +411,65 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> with 
                     
                     const SizedBox(height: AppTheme.space2xl),
                     
-                    // Animated timer circle
-                    AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        final scale = _isPaused ? 1.0 : 1.0 + (_pulseController.value * 0.02);
-                        return Transform.scale(
-                          scale: scale,
-                          child: child,
-                        );
-                      },
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 240,
-                            height: 240,
-                            child: CircularProgressIndicator(
-                              value: progress,
-                              strokeWidth: 12,
-                              backgroundColor: AppColors.divider,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                progress >= 1.0 ? AppColors.success : AppColors.primary,
+                    // Enhanced animated timer circle with AnimatedCircularProgress
+                    AnimatedCircularProgress(
+                      progress: progress,
+                      size: 240,
+                      strokeWidth: 12,
+                      color: progress >= 1.0 ? AppColors.success : AppColors.primary,
+                      showPulse: !_isPaused,
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.surface,
+                              AppColors.surfaceTinted,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadowMedium,
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _formatDuration(_elapsedSeconds),
+                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _isPaused ? AppColors.textSecondary : AppColors.primary,
+                                fontFeatures: [const FontFeature.tabularFigures()],
                               ),
                             ),
-                          ),
-                          Container(
-                            width: 200,
-                            height: 200,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.surface,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.shadow,
-                                  blurRadius: 16,
-                                  spreadRadius: 4,
+                            const SizedBox(height: AppTheme.spaceXs),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppTheme.spaceSm,
+                                vertical: AppTheme.spaceXs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (_isPaused ? AppColors.warning : AppColors.success).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                              ),
+                              child: Text(
+                                _isPaused ? 'In pausa' : 'In corso',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: _isPaused ? AppColors.warning : AppColors.success,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ],
+                              ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  _formatDuration(_elapsedSeconds),
-                                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: _isPaused ? AppColors.textSecondary : AppColors.primary,
-                                    fontFeatures: [const FontFeature.tabularFigures()],
-                                  ),
-                                ),
-                                const SizedBox(height: AppTheme.spaceXs),
-                                Text(
-                                  _isPaused ? 'In pausa' : 'In corso',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     
