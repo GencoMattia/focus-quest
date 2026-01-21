@@ -19,15 +19,20 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
   ConsumerState<TaskExecutionScreen> createState() => _TaskExecutionScreenState();
 }
 
-class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
+class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> with SingleTickerProviderStateMixin {
   Task? _task;
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _isPaused = false;
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
     _loadTask();
   }
 
@@ -51,7 +56,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
            _startTimer();
            _isPaused = false;
         } else if (task != null && task.status == 'completed') {
-           _isPaused = true; // Don't run timer for completed tasks
+           _isPaused = true;
         }
       });
     }
@@ -83,16 +88,24 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       await ref.read(taskRepositoryProvider).attachTaskImage(image);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto aggiunta! 📸')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.textOnColor),
+                const SizedBox(width: AppTheme.spaceSm),
+                const Text('Foto aggiunta! 📸'),
+              ],
+            ),
+          ),
         );
       }
     }
   }
 
   Color _getIntensityColor(int intensity) {
-    if (intensity <= 2) return AppColors.textLight;
-    if (intensity == 3) return AppColors.calmBlue;
-    return AppColors.sageGreen;
+    if (intensity <= 2) return AppColors.error;
+    if (intensity == 3) return AppColors.warning;
+    return AppColors.success;
   }
 
   Future<void> _showEmotionalCheckin({required String contextLabel}) async {
@@ -100,36 +113,86 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Come ti senti? 💙'),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spaceXs),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.favorite, color: AppColors.primary),
+                ),
+                const SizedBox(width: AppTheme.spaceSm),
+                const Expanded(child: Text('Come ti senti?')),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Il tuo stato d\'animo è importante.'),
-                const SizedBox(height: 16),
+                Text(
+                  'Il tuo stato d\'animo è importante per noi',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppTheme.spaceLg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(5, (index) {
                     final intensity = index + 1;
                     final isSelected = selectedIntensity == intensity;
-                    return IconButton(
-                      icon: Icon(
-                        isSelected ? Icons.circle : Icons.circle_outlined,
-                        color: _getIntensityColor(intensity),
-                        size: 32,
-                      ),
-                      onPressed: () {
-                        setDialogState(() => selectedIntensity = intensity);
-                      },
+                    final color = _getIntensityColor(intensity);
+                    
+                    return Column(
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              setDialogState(() => selectedIntensity = intensity);
+                            },
+                            borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected
+                                    ? color
+                                    : color.withOpacity(0.2),
+                                border: Border.all(
+                                  color: color,
+                                  width: isSelected ? 3 : 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$intensity',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? AppColors.textOnColor
+                                        : color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppTheme.spaceXs),
+                        Text(
+                          _getEmotionLabel(intensity),
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
                     );
                   }),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [Text('Basso'), Text('Alto')],
-                ),
+                const SizedBox(height: AppTheme.spaceSm),
               ],
             ),
             actions: [
@@ -137,12 +200,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 onPressed: () => context.pop(),
                 child: const Text('Salta'),
               ),
-              ElevatedButton(
+              FilledButton(
                 onPressed: selectedIntensity == null ? null : () {
                   final log = EmotionalLogsCompanion(
                     id: drift.Value(const Uuid().v4()),
                     taskId: drift.Value(_task!.id),
-                    userId: drift.Value('current_user'), // Mock
+                    userId: const drift.Value('current_user'),
                     intensity: drift.Value(selectedIntensity),
                     context: drift.Value(contextLabel),
                     createdAt: drift.Value(DateTime.now()),
@@ -151,12 +214,23 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                   Navigator.pop(context);
                 },
                 child: const Text('Salva'),
-              )
+              ),
             ],
           );
         }
       ),
     );
+  }
+
+  String _getEmotionLabel(int intensity) {
+    switch (intensity) {
+      case 1: return 'Pessimo';
+      case 2: return 'Male';
+      case 3: return 'Ok';
+      case 4: return 'Bene';
+      case 5: return 'Ottimo';
+      default: return '';
+    }
   }
 
   Future<void> _pauseTask() async {
@@ -177,7 +251,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       final session = TaskSessionsCompanion(
         id: drift.Value(const Uuid().v4()),
         taskId: drift.Value(widget.taskId),
-        startTime: drift.Value(DateTime.now().subtract(Duration(seconds: _elapsedSeconds))), // approx
+        startTime: drift.Value(DateTime.now().subtract(Duration(seconds: _elapsedSeconds))),
         endTime: drift.Value(DateTime.now()),
         durationSeconds: drift.Value(_elapsedSeconds),
       );
@@ -195,9 +269,49 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       }
 
       if (mounted) {
-        context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ottimo lavoro! Task completata 🎉')),
+        // Show success dialog
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spaceLg),
+                  decoration: BoxDecoration(
+                    color: AppColors.successLight.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.celebration,
+                    size: 64,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spaceLg),
+                Text(
+                  'Complimenti!',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spaceSm),
+                Text(
+                  'Hai completato l\'attività',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppTheme.spaceLg),
+                FilledButton(
+                  onPressed: () {
+                    context.pop(); // Close dialog
+                    context.pop(); // Return to dashboard
+                  },
+                  child: const Text('Continua'),
+                ),
+              ],
+            ),
+          ),
         );
       }
     }
@@ -206,110 +320,278 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_task == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_task == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final estimatedMinutes = _task!.estimatedDuration;
+    final estimatedSeconds = estimatedMinutes * 60;
+    final progress = estimatedSeconds > 0 
+        ? (_elapsedSeconds / estimatedSeconds).clamp(0.0, 1.0)
+        : 0.0;
 
     return Scaffold(
-      backgroundColor: AppColors.warmGrey,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Focus Mode 🧘'),
+        title: const Text('Focus Mode'),
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Vuoi uscire?'),
+                content: const Text('Il timer verrà fermato ma i progressi saranno salvati.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Rimani'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      context.pop(); // Close dialog
+                      context.pop(); // Return to previous screen
+                    },
+                    child: const Text('Esci'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.camera_alt_outlined),
-            onPressed: () => _attachImage(),
+            onPressed: _attachImage,
             tooltip: 'Aggiungi foto',
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _task!.title,
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 28),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            if (_task!.description != null)
-              Text(
-                _task!.description!,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textLight),
-                textAlign: TextAlign.center,
-              ),
-            
-            const SizedBox(height: 64),
-            
-            // Timer Visualization
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.calmBlue, width: 8),
-                color: Colors.white,
-              ),
-              child: Center(
-                child: Text(
-                  _formatDuration(_elapsedSeconds),
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: AppColors.calmBlue,
-                    fontFeatures: [const FontFeature.tabularFigures()],
-                  ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spaceLg),
+          child: Column(
+            children: [
+              // Task info
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Task title
+                    Text(
+                      _task!.title,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_task!.description != null) ...[
+                      const SizedBox(height: AppTheme.spaceSm),
+                      Text(
+                        _task!.description!,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    
+                    const SizedBox(height: AppTheme.space2xl),
+                    
+                    // Animated timer circle
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final scale = _isPaused ? 1.0 : 1.0 + (_pulseController.value * 0.02);
+                        return Transform.scale(
+                          scale: scale,
+                          child: child,
+                        );
+                      },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 240,
+                            height: 240,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 12,
+                              backgroundColor: AppColors.divider,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                progress >= 1.0 ? AppColors.success : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 200,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.surface,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.shadow,
+                                  blurRadius: 16,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _formatDuration(_elapsedSeconds),
+                                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: _isPaused ? AppColors.textSecondary : AppColors.primary,
+                                    fontFeatures: [const FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                                const SizedBox(height: AppTheme.spaceXs),
+                                Text(
+                                  _isPaused ? 'In pausa' : 'In corso',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: AppTheme.space2xl),
+                    
+                    // Progress info
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spaceMd),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: AppTheme.spaceXs),
+                          Text(
+                            'Stimato: $estimatedMinutes min',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 64),
-            
-            // Controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!_isPaused)
-                  FloatingActionButton.large(
-                    heroTag: null,
-                    backgroundColor: AppColors.lilac,
-                    onPressed: _pauseTask,
-                    child: const Icon(Icons.pause, color: AppColors.textDark),
-                  )
-                else
-                  FloatingActionButton.large(
-                    heroTag: null,
-                    backgroundColor: AppColors.sageGreen,
-                    onPressed: _resumeTask,
-                    child: const Icon(Icons.play_arrow, color: Colors.white),
+              
+              // Control buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Pause/Resume button
+                  _ActionButton(
+                    icon: _isPaused ? Icons.play_arrow : Icons.pause,
+                    label: _isPaused ? 'Riprendi' : 'Pausa',
+                    color: _isPaused ? AppColors.secondary : AppColors.warning,
+                    onPressed: _isPaused ? _resumeTask : _pauseTask,
                   ),
-                const SizedBox(width: 32),
-                FloatingActionButton.large(
-                  heroTag: null,
-                  backgroundColor: AppColors.calmBlue,
-                  onPressed: _completeTask,
-                  child: const Icon(Icons.check, size: 48, color: Colors.white),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => context.pop(), 
-              child: const Text('Torna alla Dashboard')
-            ),
-          ],
+                  
+                  // Complete button
+                  _ActionButton(
+                    icon: Icons.check,
+                    label: 'Completa',
+                    color: AppColors.success,
+                    onPressed: _completeTask,
+                    isLarge: true,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   String _formatDuration(int totalSeconds) {
-    final m = totalSeconds ~/ 60;
+    final h = totalSeconds ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
     final s = totalSeconds % 60;
+    
+    if (h > 0) {
+      return '${h.toString()}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+  final bool isLarge;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+    this.isLarge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = isLarge ? 80.0 : 64.0;
+    final iconSize = isLarge ? 36.0 : 28.0;
+    
+    return Column(
+      children: [
+        Material(
+          color: color,
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+          elevation: 4,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+            child: Container(
+              width: size,
+              height: size,
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                size: iconSize,
+                color: AppColors.textOnColor,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
