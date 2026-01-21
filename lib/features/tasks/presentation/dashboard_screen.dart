@@ -99,34 +99,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Focus Quest'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history),
+            icon: const Icon(Icons.history_rounded),
             onPressed: () {}, 
+            tooltip: 'Cronologia',
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_rounded),
             onPressed: () {},
+            tooltip: 'Impostazioni',
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildQuickStartCard(context),
-            const SizedBox(height: 16),
-            _buildFocusCard(ref, context), // New Focus Card
-            const SizedBox(height: 16),
-            _buildCreateTaskButton(context), // New Create Button
-            const SizedBox(height: 16),
-            _buildGamificationRow(ref, context),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.backgroundGradient,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildFocusCard(ref, context),
+              const SizedBox(height: 20),
+              _buildQuickStartCard(context),
+              const SizedBox(height: 20),
+              _buildCreateTaskButton(context),
+              const SizedBox(height: 20),
+              _buildGamificationRow(ref, context),
+            ],
+          ),
         ),
       ),
     );
@@ -134,10 +141,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Color _getUrgencyColor(String urgency) {
     switch (urgency) {
-      case 'high': return Colors.redAccent;
-      case 'medium': return Colors.orangeAccent;
-      case 'low': return Colors.greenAccent;
-      default: return Colors.grey;
+      case 'high': return AppColors.urgencyHigh;
+      case 'medium': return AppColors.urgencyMedium;
+      case 'low': return AppColors.urgencyLow;
+      default: return AppColors.textMedium;
+    }
+  }
+
+  LinearGradient _getUrgencyGradient(String urgency) {
+    switch (urgency) {
+      case 'high': 
+        return const LinearGradient(
+          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'medium': 
+        return const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'low': 
+        return AppColors.successGradient;
+      default: 
+        return AppColors.primaryGradient;
     }
   }
 
@@ -148,59 +176,150 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Row(
       children: [
         Expanded(
-          child: Card(
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                   const Text('🔥 Streak', style: TextStyle(fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 8),
-                   streakAsync.when(
-                     data: (val) => Text('$val giorni', style: const TextStyle(fontSize: 18, color: AppColors.calmBlue)),
-                     loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator()),
-                     error: (_,__) => const Text('-'),
-                   ),
-                ],
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF6B6B), Color(0xFFEE5A6F)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF6B6B).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {},
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded, 
+                        color: Colors.white, size: 32),
+                      const SizedBox(height: 12),
+                      const Text('Streak', 
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        )),
+                      const SizedBox(height: 4),
+                      streakAsync.when(
+                        data: (val) => Text(
+                          '$val giorni', 
+                          style: const TextStyle(
+                            fontSize: 24, 
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        loading: () => const SizedBox(
+                          height: 24, 
+                          width: 24, 
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        error: (_,__) => const Text('-', 
+                          style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: GestureDetector(
-            onTap: () {
-               // Show badges dialog
-               badgesAsync.whenData((badges) {
-                 showDialog(
-                   context: context, 
-                   builder: (_) => AlertDialog(
-                     title: const Text('I tuoi Traguardi 🏆'),
-                     content: Column(
-                       mainAxisSize: MainAxisSize.min,
-                       children: badges.isEmpty 
-                         ? [const Text('Completa delle task per ottenere badge!')] 
-                         : badges.map((b) => ListTile(title: Text(b), leading: const Icon(Icons.star, color: Colors.amber))).toList(),
-                     ),
-                     actions: [TextButton(onPressed: () => context.pop(), child: const Text('Chiudi'))],
-                   )
-                 );
-               });
-            },
-            child: Card(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                     const Text('🏆 Badge', style: TextStyle(fontWeight: FontWeight.bold)),
-                     const SizedBox(height: 8),
-                     badgesAsync.when(
-                       data: (val) => Text('${val.length} ottenuti', style: const TextStyle(fontSize: 18, color: AppColors.calmBlue)),
-                       loading: () => const SizedBox(height: 20, width: 20, child: CircularProgressIndicator()),
-                       error: (_,__) => const Text('-'),
-                     ),
-                  ],
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.purpleGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.energeticPurple.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  badgesAsync.whenData((badges) {
+                    showDialog(
+                      context: context, 
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        title: const Text('I tuoi Traguardi 🏆'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: badges.isEmpty 
+                            ? [const Text('Completa delle task per ottenere badge!')] 
+                            : badges.map((b) => ListTile(
+                                title: Text(b), 
+                                leading: const Icon(Icons.star_rounded, color: Colors.amber),
+                              )).toList(),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => context.pop(), 
+                            child: const Text('Chiudi'),
+                          ),
+                        ],
+                      )
+                    );
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.emoji_events_rounded, 
+                        color: Colors.white, size: 32),
+                      const SizedBox(height: 12),
+                      const Text('Badge', 
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        )),
+                      const SizedBox(height: 4),
+                      badgesAsync.when(
+                        data: (val) => Text(
+                          '${val.length}', 
+                          style: const TextStyle(
+                            fontSize: 24, 
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        loading: () => const SizedBox(
+                          height: 24, 
+                          width: 24, 
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        error: (_,__) => const Text('-', 
+                          style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -216,53 +335,208 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return StreamBuilder<List<Task>>(
       stream: urgentTasksAsync,
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
-        
-        // Take the first one
-        final task = snapshot.data!.first;
-        
-        return Card(
-          color: AppColors.calmBlue.withOpacity(0.1),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: AppColors.calmBlue, width: 2)
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          // Show empty state
+          return Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE0E7FF), Color(0xFFF3F4F6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            padding: const EdgeInsets.all(32.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.priority_high, color: AppColors.calmBlue),
-                    const SizedBox(width: 8),
-                    Text('Priorità Alta', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.calmBlue, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  task.title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                if (task.description != null) ...[
-                  const SizedBox(height: 8),
-                  Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
+                Icon(Icons.check_circle_outline_rounded, 
+                  size: 64, 
+                  color: AppColors.vibrantGreen.withOpacity(0.6)),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.calmBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => context.push('/execute-task/${task.id}'),
-                    child: const Text('Focus Ora 🧘'),
+                Text(
+                  'Tutto sotto controllo! 🎉',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
                   ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Nessuna task urgente al momento',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMedium,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
+            ),
+          );
+        }
+        
+        // Take the first one (most urgent)
+        final task = snapshot.data!.first;
+        final urgencyGradient = _getUrgencyGradient(task.urgency);
+        final urgencyColor = _getUrgencyColor(task.urgency);
+        
+        return Container(
+          decoration: BoxDecoration(
+            gradient: urgencyGradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: urgencyColor.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: () => context.push('/execute-task/${task.id}'),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.flash_on_rounded, 
+                            color: Colors.white, 
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'TASK URGENTE',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              if (task.deadline != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Scadenza: ${task.deadline!.day}/${task.deadline!.month}/${task.deadline!.year}',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            task.urgency.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      task.title,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (task.description != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        task.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        if (task.estimatedDuration != null) ...[
+                          Icon(Icons.timer_outlined, 
+                            color: Colors.white.withOpacity(0.9), 
+                            size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${task.estimatedDuration} min',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Inizia Ora',
+                                style: TextStyle(
+                                  color: urgencyColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_rounded, 
+                                color: urgencyColor, 
+                                size: 20),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -271,28 +545,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildCreateTaskButton(BuildContext context) {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => context.push('/create-task'),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(color: AppColors.sageGreen, shape: BoxShape.circle),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'Aggiungi Nuova Attività',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.successGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.vibrantGreen.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/create-task'),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 16),
+                const Text(
+                  'Aggiungi Nuova Attività',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -300,26 +594,52 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildQuickStartCard(BuildContext context) {
-    return Card(
-      color: AppColors.sageGreen.withOpacity(0.2),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667EEA).withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(28.0),
         child: Column(
           children: [
-            const Icon(Icons.bolt, size: 48, color: AppColors.sageGreen),
-            const SizedBox(height: 16),
-            Text(
-              'Quanto tempo hai adesso?',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.bolt_rounded, size: 40, color: Colors.white),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            const Text(
+              'Quanto tempo hai adesso?',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
             if (_isLoadingSuggestion)
-              const CircularProgressIndicator()
+              const CircularProgressIndicator(color: Colors.white)
             else
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                   // ... options
                   _TimeOptionButton(label: '15 min', minutes: 15, onTap: () => _suggestTask(15)),
                   _TimeOptionButton(label: '30 min', minutes: 30, onTap: () => _suggestTask(30)),
                   _TimeOptionButton(label: '1 h+', minutes: 60, onTap: () => _suggestTask(60)),
@@ -345,19 +665,36 @@ class _TimeOptionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textDark,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.sageGreen),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Text(label),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF667EEA),
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

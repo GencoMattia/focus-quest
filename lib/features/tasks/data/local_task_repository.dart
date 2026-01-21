@@ -39,10 +39,35 @@ class LocalTaskRepository implements TaskRepository {
 
   @override
   Stream<List<Task>> watchUrgentTasks() {
+    // Get all incomplete tasks and sort them by urgency and deadline
     return (_db.select(_db.tasks)
-          ..where((t) => t.urgency.equals('high') & t.status.equals('todo'))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
-        .watch();
+          ..where((t) => t.status.equals('todo') | t.status.equals('in_progress'))
+          ..orderBy([
+            // First, prioritize by urgency (high > medium > low)
+            (t) => OrderingTerm(
+              expression: t.urgency,
+              mode: OrderingMode.desc,
+            ),
+            // Then by deadline (closest first, nulls last)
+            (t) => OrderingTerm(
+              expression: t.deadline,
+              mode: OrderingMode.asc,
+            ),
+          ]))
+        .watch()
+        .map((tasks) {
+          // Filter to show only high urgency OR tasks with deadline within 7 days
+          final now = DateTime.now();
+          final sevenDaysFromNow = now.add(const Duration(days: 7));
+          
+          return tasks.where((task) {
+            final isHighUrgency = task.urgency == 'high';
+            final hasUrgentDeadline = task.deadline != null && 
+                task.deadline!.isBefore(sevenDaysFromNow);
+            
+            return isHighUrgency || hasUrgentDeadline;
+          }).toList();
+        });
   }
 
   @override

@@ -6,14 +6,15 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.warmGrey,
+      scaffoldBackgroundColor: AppColors.backgroundLight,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.calmBlue,
-        primary: AppColors.calmBlue,
-        secondary: AppColors.sageGreen,
-        tertiary: AppColors.lilac,
-        background: AppColors.warmGrey,
-        surface: Colors.white,
+        seedColor: AppColors.primaryBlue,
+        primary: AppColors.primaryBlue,
+        secondary: AppColors.vibrantGreen,
+        tertiary: AppColors.energeticPurple,
+        background: AppColors.backgroundLight,
+        surface: AppColors.cardBackground,
+        error: AppColors.error,
       ),
       textTheme: AppTypography.textTheme,
       appBarTheme: const AppBarTheme(
@@ -22,40 +23,69 @@ class AppTheme {
         centerTitle: true,
         titleTextStyle: TextStyle(
           color: AppColors.textDark,
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: FontWeight.bold,
+          letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
+        iconTheme: IconThemeData(color: AppColors.textDark, size: 24),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 1, // Subtle lift
+        color: AppColors.cardBackground,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.08),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24), // Softer, bigger radius
-          side: const BorderSide(color: Colors.transparent),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.grey.shade100, width: 1),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.calmBlue,
-          foregroundColor: AppColors.textDark,
-          elevation: 0,
+          backgroundColor: AppColors.primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: AppColors.primaryBlue.withOpacity(0.3),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.cardBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
         contentPadding: const EdgeInsets.all(20),
-        prefixIconColor: AppColors.textLight,
+        prefixIconColor: AppColors.textMedium,
+        labelStyle: const TextStyle(color: AppColors.textMedium),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }
