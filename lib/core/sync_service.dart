@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:focus_quest/core/database/app_database.dart';
 import 'package:focus_quest/core/database/tables.dart';
+import 'package:focus_quest/core/utils/logger.dart';
+import 'package:focus_quest/core/utils/exceptions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 class SyncService {
@@ -30,11 +32,20 @@ class SyncService {
           'updated_at': task.updatedAt.toIso8601String(),
         });
         
-        // Mark as synced localy
+        // Mark as synced locally
         await _db.update(_db.tasks).replace(task.copyWith(isDirty: false, lastSyncedAt: Value(DateTime.now())));
-      } catch (e) {
+      } catch (e, stackTrace) {
         // Handle error (e.g. retry later) or conflict
-        print('Sync error for task ${task.id}: $e');
+        if (e is supabase.AuthException) {
+          AppLogger.error('Auth error during sync for task ${task.id}', e, stackTrace, 'SyncService');
+          throw AuthException('Failed to sync task: ${e.message}', originalError: e);
+        } else if (e is supabase.PostgrestException) {
+          AppLogger.error('Database error during sync for task ${task.id}', e, stackTrace, 'SyncService');
+          throw SyncException('Failed to sync task: ${e.message}', originalError: e);
+        } else {
+          AppLogger.error('Sync error for task ${task.id}', e, stackTrace, 'SyncService');
+          throw SyncException('Failed to sync task', originalError: e);
+        }
       }
     }
 
@@ -42,27 +53,70 @@ class SyncService {
     // This is a simplified pull strategy (last_write wins)
     try {
       final response = await _supabase.from('tasks').select().eq('user_id', userId);
+      
+      // Safe type casting with validation
+      if (response is! List) {
+        AppLogger.warning('Unexpected response type from Supabase', 'SyncService');
+        return;
+      }
+      
       final remoteTasks = response as List<dynamic>;
 
       for (final remote in remoteTasks) {
-        // Upsert to local DB
-        // In a real app we would check timestamps to decide whether to overwrite
+        if (remote is! Map<String, dynamic>) {
+          AppLogger.warning('Skipping invalid remote task data: type mismatch', 'SyncService');
+          continue;
+        }
+        
+        // Validate required fields
+        if (remote['id'] == null || remote['user_id'] == null || remote['title'] == null) {
+          AppLogger.warning('Skipping remote task with missing required fields: ${remote['id']}', 'SyncService');
+          continue;
+        }
+        
+        // TODO: Implement proper conflict resolution by comparing timestamps
+        // For now, remote changes overwrite local changes
+        DateTime? remoteUpdatedAt;
+        try {
+          remoteUpdatedAt = remote['updated_at'] != null 
+              ? DateTime.parse(remote['updated_at'] as String)
+              : null;
+        } catch (e) {
+          AppLogger.warning('Invalid updated_at format for task ${remote['id']}: ${remote['updated_at']}', 'SyncService');
+        }
+        
+        DateTime? remoteCreatedAt;
+        try {
+          remoteCreatedAt = remote['created_at'] != null
+              ? DateTime.parse(remote['created_at'] as String)
+              : null;
+        } catch (e) {
+          AppLogger.warning('Invalid created_at format for task ${remote['id']}: ${remote['created_at']}', 'SyncService');
+        }
+            
         await _db.into(_db.tasks).insertOnConflictUpdate(TasksCompanion(
-          id: Value(remote['id']),
-          userId: Value(remote['user_id']),
-          title: Value(remote['title']),
-          description: Value(remote['description']),
-          estimatedDuration: Value(remote['estimated_duration']),
-          urgency: Value(remote['urgency']),
-          status: Value(remote['status']),
-          createdAt: Value(DateTime.parse(remote['created_at'])),
-          updatedAt: Value(DateTime.parse(remote['updated_at'])),
+          id: Value(remote['id'] as String),
+          userId: Value(remote['user_id'] as String),
+          title: Value(remote['title'] as String),
+          description: Value(remote['description'] as String?),
+          estimatedDuration: Value(remote['estimated_duration'] as int?),
+          urgency: Value(remote['urgency'] as String),
+          status: Value(remote['status'] as String),
+          createdAt: Value(remoteCreatedAt ?? DateTime.now()),
+          updatedAt: Value(remoteUpdatedAt ?? DateTime.now()),
           isDirty: const Value(false),
           lastSyncedAt: Value(DateTime.now()),
         ));
       }
-    } catch (e) {
-      print('Pull error: $e');
+    } catch (e, stackTrace) {
+      AppLogger.error('Pull error', e, stackTrace, 'SyncService');
+      if (e is supabase.AuthException) {
+        throw AuthException('Failed to pull remote data: ${e.message}', originalError: e);
+      } else if (e is supabase.PostgrestException) {
+        throw SyncException('Failed to pull remote data: ${e.message}', originalError: e);
+      } else {
+        throw SyncException('Failed to pull remote data', originalError: e);
+      }
     }
   }
 }

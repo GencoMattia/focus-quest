@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:focus_quest/core/utils/logger.dart';
 import 'package:focus_quest/features/auth/data/guest_mode_provider.dart';
 import 'package:focus_quest/features/auth/presentation/landing_page.dart';
 import 'package:focus_quest/features/auth/presentation/login_screen.dart';
@@ -23,7 +24,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
     final isGuest = ref.read(guestModeProvider);
-    print('DEBUG: Redirect Check - Session: $session, IsGuest: $isGuest, Path: ${state.uri}');
+    AppLogger.debug('Redirect Check - Session: ${session != null}, IsGuest: $isGuest, Path: ${state.uri}', 'Router');
     
     final isLoggedIn = session != null || isGuest;
     
@@ -108,7 +109,7 @@ class _GoRouterRefreshStream extends ChangeNotifier {
 class _GuestModeRefreshNotifier extends ChangeNotifier {
   _GuestModeRefreshNotifier(ProviderRef ref) {
     ref.listen(guestModeProvider, (_, __) {
-      print('DEBUG: Guest Mode Changed! Notifying listeners...');
+      AppLogger.debug('Guest Mode Changed! Notifying listeners...', 'Router');
       notifyListeners();
     });
   }

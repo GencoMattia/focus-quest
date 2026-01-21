@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:focus_quest/core/theme/app_colors.dart';
+import 'package:focus_quest/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
 class ScaffoldWithNavBar extends StatelessWidget {
@@ -16,37 +17,41 @@ class ScaffoldWithNavBar extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: AppColors.shadow,
+              blurRadius: 12,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: (index) {
-            navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            );
-          },
-          backgroundColor: Colors.white,
-          indicatorColor: AppColors.calmBlue.withOpacity(0.2),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.spa_outlined),
-              selectedIcon: Icon(Icons.spa, color: AppColors.calmBlue),
-              label: 'Focus',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.book_outlined),
-              selectedIcon: Icon(Icons.book, color: AppColors.calmBlue),
-              label: 'Diario',
-            ),
-          ],
+        child: SafeArea(
+          child: NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: (index) {
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
+            backgroundColor: AppColors.surface,
+            indicatorColor: AppColors.primaryLight.withOpacity(0.3),
+            height: 64,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.spa_outlined),
+                selectedIcon: Icon(Icons.spa, color: AppColors.primary),
+                label: 'Focus',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.book_outlined),
+                selectedIcon: Icon(Icons.book, color: AppColors.primary),
+                label: 'Diario',
+              ),
+            ],
+          ),
         ),
       ),
     );

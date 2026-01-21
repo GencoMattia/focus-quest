@@ -27,7 +27,9 @@ This project is an **Offline-First** application that uses **Supabase** for the 
 3.  **Supabase Setup**:
     - Go to your Supabase Dashboard -> SQL Editor.
     - Copy the contents of `supabase_schema.sql` and run it.
-    - Copy your Supabase URL and Anon Key (you will need to configure `Supabase.initialize` in `lib/main.dart`).
+    - Copy your Supabase URL and Anon Key.
+    - For development: Update the default values in `lib/core/config/env_config.dart`.
+    - For production: Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment variables.
 
 4.  **Run the App**:
     ```bash
@@ -41,6 +43,8 @@ The app follows a **Feature-First** architecture with **Riverpod** for state man
 -   **Domain Layer**: Defines entities and abstract repositories (`lib/features/tasks/domain`).
 -   **Data Layer**: Implements repositories using Drift (`lib/features/tasks/data`).
 -   **Presentation Layer**: UI logic and Widgets (`lib/features/tasks/presentation`).
+
+For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## 📱 Features Implemented (MVP)
 

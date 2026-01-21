@@ -5,6 +5,7 @@ import 'package:focus_quest/core/database/app_database.dart';
 import 'package:focus_quest/core/theme/app_theme.dart';
 import 'package:focus_quest/core/theme/app_colors.dart';
 import 'package:focus_quest/features/tasks/data/task_providers.dart';
+import 'package:focus_quest/core/presentation/widgets/calm_card.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
@@ -19,13 +20,27 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
-  int _estimatedDuration = 15;
+  
+  // Task properties with sensible defaults
+  int _estimatedDuration = 30;
   String _urgency = 'medium';
   DateTime? _deadline;
+  
+  // AI-powered suggestion feedback
   String? _historyFeedback;
   int? _suggestedDuration;
+  bool _showSuggestions = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
 
   Future<void> _checkHistoryStats(String title) async {
+    if (title.length < 3) return; // Don't check for very short titles
+    
     final stats = await ref.read(taskRepositoryProvider).getTaskCompletionStats(title);
     
     if (stats != null) {
@@ -35,28 +50,48 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
 
       String msg;
       if (diff > 5) {
-        msg = "Di solito preventivi $avgEst min, ma ci metti $avgAct min.\nTi consiglio di impostare $avgAct min per stare serenə! 🧘";
+        msg = "💡 Di solito preventivi $avgEst min, ma ci metti $avgAct min. Ti consiglio $avgAct min.";
       } else if (diff < -5) {
-        msg = "Sei violentissimə! 💪 Preventivi $avgEst min ma finisci in $avgAct.\nHai risparmiato ${diff.abs()} min!";
+        msg = "💪 Sei velocissimo! Preventivi $avgEst min ma finisci in $avgAct.";
       } else {
-        msg = "Ottimo! Le tue stime ($avgEst min) sono molto precise. Continua così! 🎯";
+        msg = "🎯 Ottimo! Le tue stime ($avgEst min) sono precise!";
       }
 
-      setState(() {
-        _suggestedDuration = avgAct; // Suggest the ACTUAL time
-        _historyFeedback = msg;
-      });
+      if (mounted) {
+        setState(() {
+          _suggestedDuration = avgAct;
+          _historyFeedback = msg;
+          _showSuggestions = true;
+        });
+      }
     } else {
       setState(() {
         _historyFeedback = null;
         _suggestedDuration = null;
+        _showSuggestions = false;
       });
+    }
+  }
+
+  void _applySuggestion() {
+    if (_suggestedDuration != null) {
+      setState(() {
+        _estimatedDuration = _suggestedDuration!;
+        _showSuggestions = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ Tempo aggiornato con il suggerimento'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Nuova Attività'),
         leading: IconButton(
@@ -64,157 +99,470 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Autocomplete<String>(
-                    optionsBuilder: (TextEditingValue textEditingValue) async {
-                      if (textEditingValue.text == '') {
-                        return const Iterable<String>.empty();
-                      }
-                      // Fetch distinct titles from repo using Riverpod
-                      final allTitles = await ref.read(taskRepositoryProvider).getDistinctTaskTitles();
-                      return allTitles.where((String option) {
-                        return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
-                      });
-                    },
-                    onSelected: (String selection) {
-                      _titleController.text = selection;
-                      _checkHistoryStats(selection);
-                    },
-                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                      // Sync local controller with Autocomplete's controller
-                      if (_titleController.text != controller.text) {
-                        controller.text = _titleController.text;
-                      }
-                      return TextFormField(
-                        controller: controller, // Use the Autocomplete controller
-                        focusNode: focusNode,
-                        onChanged: (val) {
-                          _titleController.text = val; // Keep master controller synced
-                        },
-                        decoration: const InputDecoration(
-                          labelText: 'Titolo',
-                          hintText: 'Cosa devi fare?',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.edit_outlined),
-                        ),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Inserisci un titolo' : null,
-                      );
-                    },
-                  );
-                }
+      body: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppTheme.spaceMd),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title section with autocomplete
+                    _buildTitleSection(),
+                    
+                    // AI-powered suggestion banner
+                    if (_showSuggestions && _historyFeedback != null)
+                      _buildSuggestionBanner(),
+                    
+                    const SizedBox(height: AppTheme.spaceLg),
+                    
+                    // Description
+                    _buildDescriptionSection(),
+                    
+                    const SizedBox(height: AppTheme.spaceLg),
+                    
+                    // Duration slider
+                    _buildDurationSection(),
+                    
+                    const SizedBox(height: AppTheme.spaceLg),
+                    
+                    // Urgency selector
+                    _buildUrgencySection(),
+                    
+                    const SizedBox(height: AppTheme.spaceLg),
+                    
+                    // Deadline picker
+                    _buildDeadlineSection(),
+                    
+                    const SizedBox(height: AppTheme.spaceXl),
+                  ],
+                ),
               ),
-              // Feedback Widget
-              if (_historyFeedback != null && _suggestedDuration != null) ...[
-                const SizedBox(height: 12),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _estimatedDuration = _suggestedDuration!;
-                        _historyFeedback = "Tempo aggiornato a $_estimatedDuration min! 🚀";
-                        _suggestedDuration = null; // Disable further clicks for this suggestion
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.calmBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.calmBlue.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lightbulb_outline, color: AppColors.calmBlue),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _historyFeedback!,
-                              style: const TextStyle(color: AppColors.textDark, fontSize: 13),
-                            ),
-                          ),
-                          const Icon(Icons.touch_app, size: 16, color: AppColors.textLight),
-                        ],
-                      ),
+            ),
+            
+            // Bottom action bar
+            _buildBottomActionBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Cosa devi fare?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) async {
+            if (textEditingValue.text.length < 2) {
+              return const Iterable<String>.empty();
+            }
+            final allTitles = await ref.read(taskRepositoryProvider).getDistinctTaskTitles();
+            return allTitles.where((String option) {
+              return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+            });
+          },
+          onSelected: (String selection) {
+            _titleController.text = selection;
+            _checkHistoryStats(selection);
+          },
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            if (_titleController.text != controller.text) {
+              controller.text = _titleController.text;
+            }
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              onChanged: (val) {
+                _titleController.text = val;
+                if (val.length >= 3) {
+                  _checkHistoryStats(val);
+                }
+              },
+              decoration: InputDecoration(
+                hintText: 'es. Studiare matematica, Fare la spesa...',
+                prefixIcon: const Icon(Icons.task_alt_outlined),
+                suffixIcon: controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          controller.clear();
+                          _titleController.clear();
+                          setState(() {
+                            _showSuggestions = false;
+                            _historyFeedback = null;
+                          });
+                        },
+                      )
+                    : null,
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Inserisci un titolo' : null,
+              textCapitalization: TextCapitalization.sentences,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuggestionBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppTheme.spaceMd),
+      child: CalmCard(
+        color: AppColors.primaryLight.withOpacity(0.2),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        padding: const EdgeInsets.all(AppTheme.spaceMd),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spaceXs),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: AppColors.textOnColor,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spaceSm),
+                Expanded(
+                  child: Text(
+                    _historyFeedback!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'Descrizione (opzionale)',
-                  border: OutlineInputBorder(),
+            ),
+            if (_suggestedDuration != null) ...[
+              const SizedBox(height: AppTheme.spaceSm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _applySuggestion,
+                  icon: const Icon(Icons.check, size: 16),
+                  label: Text('Usa $_suggestedDuration minuti'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spaceSm,
+                      vertical: AppTheme.spaceXs,
+                    ),
+                  ),
                 ),
-                maxLines: 3,
               ),
-              const SizedBox(height: 24),
-              Text('Tempo stimato', style: Theme.of(context).textTheme.bodyLarge),
-              Slider(
-                value: _estimatedDuration.toDouble(),
-                min: 5,
-                max: 120,
-                divisions: 23,
-                label: '$_estimatedDuration min',
-                activeColor: AppColors.calmBlue,
-                onChanged: (val) {
-                  setState(() => _estimatedDuration = val.round());
-                },
-              ),
-              Text('$_estimatedDuration minuti', textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                value: _urgency,
-                decoration: const InputDecoration(
-                  labelText: 'Urgenza',
-                  border: OutlineInputBorder(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dettagli (opzionale)',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        TextFormField(
+          controller: _descController,
+          decoration: const InputDecoration(
+            hintText: 'Aggiungi note o dettagli...',
+            prefixIcon: Icon(Icons.notes_outlined),
+          ),
+          maxLines: 3,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDurationSection() {
+    return CalmCard(
+      color: AppColors.surface,
+      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timer_outlined, color: AppColors.primary),
+              const SizedBox(width: AppTheme.spaceSm),
+              Text(
+                'Tempo stimato',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Bassa - Nessuna fretta')),
-                  DropdownMenuItem(value: 'medium', child: Text('Media - Importante')),
-                  DropdownMenuItem(value: 'high', child: Text('Alta - Da fare subito')),
-                ],
-                onChanged: (val) => setState(() => _urgency = val!),
               ),
-              const SizedBox(height: 24),
-              ListTile(
-                title: Text(_deadline == null
-                    ? 'Nessuna scadenza'
-                    : 'Scadenza: ${_deadline!.day}/${_deadline!.month}/${_deadline!.year}'),
-                trailing: const Icon(Icons.calendar_today),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: Colors.grey)),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) {
-                    setState(() => _deadline = date);
-                  }
-                },
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _saveTask,
-                child: const Text('Salva Attività'),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spaceSm,
+                  vertical: AppTheme.spaceXs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                child: Text(
+                  '$_estimatedDuration min',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
+          const SizedBox(height: AppTheme.spaceMd),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 6,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+            ),
+            child: Slider(
+              value: _estimatedDuration.toDouble(),
+              min: 5,
+              max: 120,
+              divisions: 23,
+              label: '$_estimatedDuration min',
+              onChanged: (val) {
+                setState(() => _estimatedDuration = val.round());
+              },
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('5 min', style: Theme.of(context).textTheme.bodySmall),
+              Text('120 min', style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUrgencySection() {
+    return CalmCard(
+      color: AppColors.surface,
+      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.flag_outlined, color: AppColors.secondary),
+              const SizedBox(width: AppTheme.spaceSm),
+              Text(
+                'Urgenza',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceMd),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'low',
+                label: Text('Bassa'),
+                icon: Icon(Icons.sentiment_satisfied, size: 18),
+              ),
+              ButtonSegment(
+                value: 'medium',
+                label: Text('Media'),
+                icon: Icon(Icons.sentiment_neutral, size: 18),
+              ),
+              ButtonSegment(
+                value: 'high',
+                label: Text('Alta'),
+                icon: Icon(Icons.warning_amber, size: 18),
+              ),
+            ],
+            selected: {_urgency},
+            onSelectionChanged: (Set<String> newSelection) {
+              setState(() {
+                _urgency = newSelection.first;
+              });
+            },
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spaceSm),
+          Text(
+            _getUrgencyDescription(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getUrgencyDescription() {
+    switch (_urgency) {
+      case 'low':
+        return 'Nessuna fretta, falla quando hai tempo';
+      case 'medium':
+        return 'Importante ma non urgente';
+      case 'high':
+        return 'Da fare il prima possibile';
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildDeadlineSection() {
+    return CalmCard(
+      color: AppColors.surface,
+      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      onTap: _pickDeadline,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spaceSm),
+            decoration: BoxDecoration(
+              color: _deadline != null
+                  ? AppColors.accentLight.withOpacity(0.3)
+                  : AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            ),
+            child: Icon(
+              Icons.event_outlined,
+              color: _deadline != null ? AppColors.accent : AppColors.textTertiary,
+            ),
+          ),
+          const SizedBox(width: AppTheme.spaceMd),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Scadenza',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _deadline == null
+                      ? 'Nessuna scadenza'
+                      : _formatDeadline(_deadline!),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: _deadline != null
+                        ? AppColors.textPrimary
+                        : AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_deadline != null)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() => _deadline = null);
+              },
+              color: AppColors.textSecondary,
+            )
+          else
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.textTertiary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDeadline() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _deadline ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Seleziona scadenza',
+      cancelText: 'Annulla',
+      confirmText: 'OK',
+    );
+    if (date != null) {
+      setState(() => _deadline = date);
+    }
+  }
+
+  String _formatDeadline(DateTime date) {
+    final now = DateTime.now();
+    final diff = date.difference(now).inDays;
+    
+    if (diff == 0) return 'Oggi';
+    if (diff == 1) return 'Domani';
+    if (diff < 7) return 'In $diff giorni';
+    
+    final monthNames = [
+      'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+      'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'
+    ];
+    return '${date.day} ${monthNames[date.month - 1]} ${date.year}';
+  }
+
+  Widget _buildBottomActionBar() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spaceMd),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            offset: const Offset(0, -2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => context.pop(),
+                child: const Text('Annulla'),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spaceSm),
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                onPressed: _saveTask,
+                icon: const Icon(Icons.check),
+                label: const Text('Salva Attività'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -225,8 +573,10 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       final task = TasksCompanion(
         id: drift.Value(const Uuid().v4()),
         userId: const drift.Value('current_user_id'), // Mock User ID
-        title: drift.Value(_titleController.text),
-        description: drift.Value(_descController.text),
+        title: drift.Value(_titleController.text.trim()),
+        description: drift.Value(_descController.text.trim().isNotEmpty 
+            ? _descController.text.trim() 
+            : null),
         estimatedDuration: drift.Value(_estimatedDuration),
         urgency: drift.Value(_urgency),
         deadline: drift.Value(_deadline),
@@ -235,7 +585,22 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
       );
 
       ref.read(taskRepositoryProvider).createTask(task);
+      
       context.pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.textOnColor),
+              const SizedBox(width: AppTheme.spaceSm),
+              const Expanded(child: Text('Attività creata con successo!')),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.success,
+        ),
+      );
     }
   }
 }

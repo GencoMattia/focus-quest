@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:focus_quest/core/database/app_database.dart';
 import 'package:focus_quest/core/sync_service.dart';
 import 'package:focus_quest/features/gamification/gamification_providers.dart';
+import 'package:focus_quest/core/presentation/widgets/calm_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -31,13 +32,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _syncData() async {
-    // Only sync if supabase is initialized (checked implicitly inside service or could be checked here)
-    // For now we just run it. Ideally this would be a provider too.
     try {
-       // Quick and dirty manual instantiation for MVP, 
-       // in real world use a provider for SyncService
-       final db = ref.read(databaseProvider);
-       await SyncService(db, Supabase.instance.client).syncPendingChanges();
+      final db = ref.read(databaseProvider);
+      await SyncService(db, Supabase.instance.client).syncPendingChanges();
     } catch (e) {
       // Ignore sync errors on startup
     }
@@ -47,7 +44,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() => _isLoadingSuggestion = true);
     
     // Artificial delay for UX "thinking" feel
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 600));
     
     final task = await ref.read(quickStartServiceProvider).suggestTask(minutes);
     
@@ -61,7 +58,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _showSuggestionDialog(task);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nessuna task urgente per questo lasso di tempo. Rilassati! 🌿')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.spa, color: AppColors.textOnColor),
+                const SizedBox(width: AppTheme.spaceSm),
+                const Expanded(
+                  child: Text('Nessuna task urgente. Rilassati! 🌿'),
+                ),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -71,26 +79,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ecco cosa puoi fare!'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spaceSm),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+              ),
+              child: const Icon(Icons.lightbulb_outline, color: AppColors.primary),
+            ),
+            const SizedBox(width: AppTheme.spaceSm),
+            const Expanded(child: Text('Ecco cosa puoi fare!')),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(task.title, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            if (task.description != null) Text(task.description!),
-            const SizedBox(height: 16),
-            Chip(label: Text('${task.estimatedDuration} min')),
+            Text(
+              task.title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spaceSm),
+            if (task.description != null) ...[
+              Text(
+                task.description!,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppTheme.spaceMd),
+            ],
+            Wrap(
+              spacing: AppTheme.spaceSm,
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.timer_outlined, size: 16),
+                  label: Text('${task.estimatedDuration} min'),
+                ),
+                if (task.urgency == 'high')
+                  Chip(
+                    backgroundColor: AppColors.errorLight,
+                    label: const Text('Urgente'),
+                  ),
+              ],
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => context.pop(), child: const Text('Magari dopo')),
-          ElevatedButton(
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text('Magari dopo'),
+          ),
+          FilledButton.icon(
             onPressed: () {
               context.pop();
               context.push('/execute-task/${task.id}');
             },
-            child: const Text('Inizia Ora 🚀'),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Inizia Ora'),
           ),
         ],
       ),
@@ -99,6 +147,604 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          // Modern app bar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            backgroundColor: AppColors.surface,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                'Focus Quest',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              titlePadding: const EdgeInsets.only(
+                left: AppTheme.spaceMd,
+                bottom: AppTheme.spaceMd,
+              ),
+              expandedTitleScale: 1.5,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () {},
+                tooltip: 'Notifiche',
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () {},
+                tooltip: 'Impostazioni',
+              ),
+            ],
+          ),
+          
+          // Content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spaceMd),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Greeting section
+                  _buildGreetingSection(context),
+                  const SizedBox(height: AppTheme.spaceLg),
+                  
+                  // Quick Start Card - Most prominent
+                  _buildQuickStartCard(context),
+                  const SizedBox(height: AppTheme.spaceMd),
+                  
+                  // Priority Task Card (if available)
+                  _buildPriorityTaskCard(context),
+                  const SizedBox(height: AppTheme.spaceMd),
+                  
+                  // Gamification Stats
+                  _buildGamificationSection(context),
+                  const SizedBox(height: AppTheme.spaceMd),
+                  
+                  // Quick Actions
+                  _buildQuickActions(context),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGreetingSection(BuildContext context) {
+    final hour = DateTime.now().hour;
+    String greeting;
+    IconData greetingIcon;
+    
+    if (hour < 12) {
+      greeting = 'Buongiorno';
+      greetingIcon = Icons.wb_sunny_outlined;
+    } else if (hour < 18) {
+      greeting = 'Buon pomeriggio';
+      greetingIcon = Icons.wb_twilight_outlined;
+    } else {
+      greeting = 'Buonasera';
+      greetingIcon = Icons.nights_stay_outlined;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(greetingIcon, color: AppColors.primary, size: 28),
+            const SizedBox(width: AppTheme.spaceSm),
+            Text(
+              greeting,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spaceXs),
+        Text(
+          'Cosa vuoi fare oggi?',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickStartCard(BuildContext context) {
+    return CalmCard(
+      color: AppColors.primaryLight.withOpacity(0.3),
+      border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spaceSm),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.bolt, size: 32, color: AppColors.primary),
+          ),
+          const SizedBox(height: AppTheme.spaceMd),
+          Text(
+            'Quick Start',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spaceXs),
+          Text(
+            'Quanto tempo hai adesso?',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTheme.spaceLg),
+          if (_isLoadingSuggestion)
+            Column(
+              children: [
+                const SizedBox(
+                  height: 32,
+                  width: 32,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(height: AppTheme.spaceSm),
+                Text(
+                  'Sto pensando...',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            )
+          else
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppTheme.spaceSm,
+              runSpacing: AppTheme.spaceSm,
+              children: [
+                _TimeOptionButton(
+                  label: '15 min',
+                  minutes: 15,
+                  icon: Icons.timer_outlined,
+                  onTap: () => _suggestTask(15),
+                ),
+                _TimeOptionButton(
+                  label: '30 min',
+                  minutes: 30,
+                  icon: Icons.schedule_outlined,
+                  onTap: () => _suggestTask(30),
+                  isPrimary: true,
+                ),
+                _TimeOptionButton(
+                  label: '1 ora+',
+                  minutes: 60,
+                  icon: Icons.access_time,
+                  onTap: () => _suggestTask(60),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityTaskCard(BuildContext context) {
+    final urgentTasksAsync = ref.watch(taskRepositoryProvider).watchUrgentTasks();
+
+    return StreamBuilder<List<Task>>(
+      stream: urgentTasksAsync,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        final task = snapshot.data!.first;
+        
+        return CalmCard(
+          color: AppColors.errorLight.withOpacity(0.1),
+          border: Border.all(color: AppColors.error.withOpacity(0.3), width: 2),
+          onTap: () => context.push('/execute-task/${task.id}'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.spaceXs),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    ),
+                    child: const Icon(
+                      Icons.priority_high,
+                      color: AppColors.textOnColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spaceSm),
+                  Text(
+                    'Priorità Alta',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spaceMd),
+              Text(
+                task.title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (task.description != null) ...[
+                const SizedBox(height: AppTheme.spaceXs),
+                Text(
+                  task.description!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+              const SizedBox(height: AppTheme.spaceMd),
+              Wrap(
+                spacing: AppTheme.spaceSm,
+                children: [
+                  Chip(
+                    avatar: const Icon(Icons.timer_outlined, size: 14),
+                    label: Text('${task.estimatedDuration} min'),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  if (task.deadline != null)
+                    Chip(
+                      avatar: const Icon(Icons.event_outlined, size: 14),
+                      label: Text(_formatDate(task.deadline!)),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGamificationSection(BuildContext context) {
+    final streakAsync = ref.watch(currentStreakProvider);
+    final badgesAsync = ref.watch(earnedBadgesProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'I tuoi progressi',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        Row(
+          children: [
+            Expanded(
+              child: CalmCard(
+                padding: const EdgeInsets.all(AppTheme.spaceMd),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spaceSm),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningLight.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text('🔥', style: TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(height: AppTheme.spaceSm),
+                    Text(
+                      'Streak',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: AppTheme.spaceXs),
+                    streakAsync.when(
+                      data: (val) => Text(
+                        '$val',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, __) => const Text('-'),
+                    ),
+                    Text(
+                      'giorni',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spaceSm),
+            Expanded(
+              child: CalmCard(
+                padding: const EdgeInsets.all(AppTheme.spaceMd),
+                onTap: () {
+                  badgesAsync.whenData((badges) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: Row(
+                          children: [
+                            const Icon(Icons.emoji_events, color: AppColors.warning),
+                            const SizedBox(width: AppTheme.spaceSm),
+                            const Text('I tuoi Traguardi'),
+                          ],
+                        ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: badges.isEmpty
+                              ? [
+                                  const Icon(
+                                    Icons.stars_outlined,
+                                    size: 48,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  const SizedBox(height: AppTheme.spaceSm),
+                                  const Text(
+                                    'Completa delle task per ottenere badge!',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ]
+                              : badges
+                                  .map((b) => ListTile(
+                                        leading: const Icon(
+                                          Icons.star,
+                                          color: AppColors.warning,
+                                        ),
+                                        title: Text(b),
+                                      ))
+                                  .toList(),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => context.pop(),
+                            child: const Text('Chiudi'),
+                          ),
+                        ],
+                      ),
+                    );
+                  });
+                },
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spaceSm),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningLight.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text('🏆', style: TextStyle(fontSize: 24)),
+                    ),
+                    const SizedBox(height: AppTheme.spaceSm),
+                    Text(
+                      'Badge',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: AppTheme.spaceXs),
+                    badgesAsync.when(
+                      data: (val) => Text(
+                        '${val.length}',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, __) => const Text('-'),
+                    ),
+                    Text(
+                      'ottenuti',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Azioni rapide',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        CalmCard(
+          onTap: () => context.push('/create-task'),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spaceSm),
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryLight,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.add_task,
+                  color: AppColors.secondary,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nuova Attività',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Aggiungi un nuovo compito',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textTertiary,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTheme.spaceSm),
+        CalmCard(
+          onTap: () => context.push('/journal'),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spaceSm),
+                decoration: BoxDecoration(
+                  color: AppColors.accentLight,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                child: const Icon(
+                  Icons.book_outlined,
+                  color: AppColors.accent,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spaceMd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Vedi tutte le attività',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Controlla il tuo diario',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textTertiary,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = date.difference(now).inDays;
+    
+    if (diff == 0) return 'Oggi';
+    if (diff == 1) return 'Domani';
+    if (diff < 7) return 'In $diff giorni';
+    
+    return '${date.day}/${date.month}';
+  }
+}
+
+class _TimeOptionButton extends StatelessWidget {
+  final String label;
+  final int minutes;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isPrimary;
+
+  const _TimeOptionButton({
+    required this.label,
+    required this.minutes,
+    required this.icon,
+    required this.onTap,
+    this.isPrimary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isPrimary ? AppColors.primary : AppColors.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTheme.spaceMd,
+            vertical: AppTheme.spaceSm,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+            border: Border.all(
+              color: isPrimary ? AppColors.primary : AppColors.divider,
+              width: isPrimary ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isPrimary ? AppColors.textOnColor : AppColors.textPrimary,
+              ),
+              const SizedBox(width: AppTheme.spaceXs),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary ? AppColors.textOnColor : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+  Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Focus Quest'),

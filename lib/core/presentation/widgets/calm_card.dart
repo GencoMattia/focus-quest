@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:focus_quest/core/theme/app_colors.dart';
+import 'package:focus_quest/core/theme/app_theme.dart';
 
 class CalmCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
   final Color? color;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final Border? border;
+  final double? elevation;
 
   const CalmCard({
     super.key,
@@ -13,20 +17,25 @@ class CalmCard extends StatelessWidget {
     this.onTap,
     this.color,
     this.padding,
+    this.margin,
+    this.border,
+    this.elevation,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: margin ?? const EdgeInsets.symmetric(vertical: AppTheme.spaceSm),
       decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: color ?? AppColors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+        border: border,
         boxShadow: [
           BoxShadow(
-            color: AppColors.textDark.withOpacity(0.05),
-            offset: const Offset(0, 4),
-            blurRadius: 12,
+            color: AppColors.shadow,
+            offset: const Offset(0, 2),
+            blurRadius: elevation ?? 8,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -34,9 +43,9 @@ class CalmCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppTheme.radiusXl),
           child: Padding(
-            padding: padding ?? const EdgeInsets.all(20),
+            padding: padding ?? const EdgeInsets.all(AppTheme.spaceMd),
             child: child,
           ),
         ),
