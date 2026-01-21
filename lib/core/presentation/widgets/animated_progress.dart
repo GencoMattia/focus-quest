@@ -165,6 +165,9 @@ class SkeletonLoader extends StatefulWidget {
   final double height;
   final BorderRadius? borderRadius;
   
+  // Shimmer effect constants
+  static const double _shimmerWidth = 0.3;
+  
   const SkeletonLoader({
     super.key,
     required this.width,
@@ -219,9 +222,9 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
                 AppColors.surfaceVariant,
               ],
               stops: [
-                _animation.value - 0.3,
+                _animation.value - SkeletonLoader._shimmerWidth,
                 _animation.value,
-                _animation.value + 0.3,
+                _animation.value + SkeletonLoader._shimmerWidth,
               ].map((stop) => stop.clamp(0.0, 1.0)).toList(),
             ),
           ),

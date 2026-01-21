@@ -148,6 +148,7 @@ class _AnimatedCalmButtonState extends State<AnimatedCalmButton>
   @override
   Widget build(BuildContext context) {
     final gradient = _getGradient();
+    final border = _getBorder();
     
     final button = AnimatedScale(
       scale: _isPressed ? AppAnimations.pressScale : (_isHovered ? 1.02 : 1.0),
@@ -159,8 +160,8 @@ class _AnimatedCalmButtonState extends State<AnimatedCalmButton>
             ? BoxDecoration(
                 gradient: gradient,
                 borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                border: _getBorder() != null 
-                    ? Border.all(color: _getBorder()!.color, width: _getBorder()!.width)
+                border: border != null 
+                    ? Border.all(color: border.color, width: border.width)
                     : null,
                 boxShadow: widget.type != AnimatedButtonType.ghost && 
                            widget.type != AnimatedButtonType.outlined
@@ -180,7 +181,7 @@ class _AnimatedCalmButtonState extends State<AnimatedCalmButton>
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-            side: _getBorder() ?? BorderSide.none,
+            side: border ?? BorderSide.none,
           ),
           child: InkWell(
             onTap: widget.isLoading ? null : widget.onPressed,
